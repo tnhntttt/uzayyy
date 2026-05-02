@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Starship Strike - Taslak 3 (Final Boss)</title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;900&display=swap" rel="stylesheet">
+    <style>
+        :root { 
+            --neon-green: #39ff14; 
+            --efe-color: #00f2ff; 
+            --gizem-color: #ff00ff;
+            --boss-blue: #0077ff;
+            --bonus-gold: #ffd700;
+        }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; font-family: 'Montserrat', sans-serif; }
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #020205; touch-action: none; position: fixed; }
+        #game-container { position: relative; width: 100vw; height: 100vh; background: radial-gradient(circle at center, #0d0d26 0%, #020205 100%); overflow: hidden; }
+
+        .ui-panel { position: absolute; top: 40px; width: calc(100% - 40px); left: 20px; display: flex; justify-content: space-between; z-index: 100; }
+        .stat-box { color: #fff; font-size: 18px; font-weight: 700; text-transform: uppercase; }
+        #phase-indicator { margin-left: 10px; font-weight: 900; }
+        
+        #player {
+            position: absolute; width: 90px; height: 90px;
+            background: url('https://i.ibb.co/6cNGYhdf/HE-F-G-r-nt-s.avif') no-repeat center;
+            background-size: contain; z-index: 50;
+            filter: drop-shadow(0 0 15px var(--neon-green));
+        }
+
+        .enemy { position: absolute; width: 45px; height: 45px; background: url('https://i.ibb.co/M570SNVj/HE-F-G-r-nt-s.avif') no-repeat center; background-size: contain; z-index: 30; transform: rotate(180deg); }
+        
+        .boss-container { position: absolute; z-index: 30; display: flex; flex-direction: column; align-items: center; transition: filter 0.3s; }
+        .boss {
+            width: 112.5px; height: 112.5px;
+            background: url('https://i.ibb.co/M570SNVj/HE-F-G-r-nt-s.avif') no-repeat center;
+            background-size: contain; transform: rotate(180deg);
+            filter: hue-rotate(200deg) brightness(1.3) drop-shadow(0 0 40px var(--boss-blue));
+        }
+
+        .boss-hp-bar-bg {
+            width: 140px; height: 10px; background: rgba(255,255,255,0.1);
+            border-radius: 5px; margin-bottom: 12px; border: 1px solid rgba(0, 119, 255, 0.6);
+            overflow: hidden;
+        }
+        .boss-hp-bar-fill {
+            width: 100%; height: 100%; background: var(--boss-blue);
+            box-shadow: 0 0 15px var(--boss-blue); transition: width 0.1s linear;
+        }
+
+        #motivation-text {
+            position: absolute; top: 25%; width: 100%; text-align: center;
+            color: var(--gizem-color); font-size: 28px; font-weight: 900;
+            text-shadow: 0 0 20px var(--gizem-color); display: none; z-index: 200;
+            animation: pulseText 0.5s infinite alternate;
+        }
+        @keyframes pulseText { from { transform: scale(1); opacity: 0.8; } to { transform: scale(1.1); opacity: 1; } }
+
+        .bonus-item {
+            position: absolute; width: 40px; height: 40px; background: var(--bonus-gold);
+            border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            font-weight: 900; font-size: 24px; color: #000; z-index: 45;
+            box-shadow: 0 0 25px var(--bonus-gold), inset 0 0 10px #fff;
+            animation: bounce 0.6s infinite alternate;
+        }
+
+        @keyframes bounce { from { transform: scale(0.8) translateY(0); } to { transform: scale(1.2) translateY(-10px); } }
+
+        .explosion-fx { position: absolute; background: url('https://i.ibb.co/r25TNmqs/HE-F-G-r-nt-s.avif') no-repeat center; background-size: contain; z-index: 60; pointer-events: none; animation: burst 0.5s ease-out forwards; }
+        @keyframes burst { 0% { transform: scale(0.3); opacity: 1; } 100% { transform: scale(var(--exp-scale, 1)); opacity: 0; } }
+
+        .firework {
+            position: absolute; width: 5px; height: 5px; border-radius: 50%;
+            z-index: 100; pointer-events: none; animation: fireworkAnim 1s ease-out forwards;
+        }
+        @keyframes fireworkAnim {
+            0% { transform: translate(0, 0); opacity: 1; }
+            100% { transform: translate(var(--tx), var(--ty)); opacity: 0; }
+        }
+
+        .bullet { position: absolute; z-index: 40; border-radius: 4px; pointer-events: none; }
+        .player-bullet-v1 { width: 4px; height: 18px; background: var(--neon-green); box-shadow: 0 0 10px var(--neon-green); }
+        .player-bullet-v2 { width: 30px; height: 30px; background: url('https://i.ibb.co/KtNCgfX/HE-F-G-r-nt-s.avif') no-repeat center; background-size: contain; }
+        .player-bullet-v3 { width: 6px; height: 22px; background: var(--gizem-color); box-shadow: 0 0 12px var(--gizem-color); }
+        .player-bullet-boss { width: 10px; height: 30px; background: var(--boss-blue); box-shadow: 0 0 15px var(--boss-blue), 0 0 5px #fff; }
+        
+        .bullet.powered { background: var(--bonus-gold) !important; box-shadow: 0 0 20px var(--bonus-gold), 0 0 5px #fff !important; }
+
+        #overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 1000; }
+        #overlay h1 { color: #fff; font-weight: 900; }
+        #overlay button { margin-top: 20px; padding: 15px 40px; background: var(--neon-green); border: none; border-radius: 50px; font-weight: 900; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+    <div id="game-container">
+        <div id="motivation-text">HADİ BUNU YAPABİLİRSİN GİZEM!!</div>
+        <div class="ui-panel">
+            <div class="stat-box">SKOR: <span id="scoreVal">0</span> <span id="phase-indicator"></span></div>
+            <div class="stat-box">CAN: <span id="healthVal">100</span></div>
+        </div>
+        <div id="overlay"><h1>OYUN BİTTİ</h1><button onclick="resetGame()">TEKRAR BAŞLA</button></div>
+        <div id="player"></div>
+    </div>
+
+    <script>
+        const container = document.getElementById('game-container');
+        const player = document.getElementById('player');
+        const scoreVal = document.getElementById('scoreVal');
+        const phaseIndicator = document.getElementById('phase-indicator');
+        const overlay = document.getElementById('overlay');
+        const motivText = document.getElementById('motivation-text');
+
+        let score, health, playerX, playerY, isGameOver, isFiring, enemies, bonuses, currentPhase;
+        let lastFireTime = 0, isPoweredUp = false, powerUpTimer = null;
+        let gizemStack = 0, bossActive = false;
+        let wingLeftBroken = false, wingRightBroken = false;
+
+        function init() {
+            score = 0; health = 100; isGameOver = false; enemies = []; bonuses = []; currentPhase = 1;
+            isPoweredUp = false; gizemStack = 0; bossActive = false;
+            wingLeftBroken = false; wingRightBroken = false;
+            scoreVal.innerText = score; phaseIndicator.innerText = "";
+            overlay.style.display = 'none';
+            playerX = window.innerWidth / 2; playerY = window.innerHeight * 0.85;
+            updatePlayerPos(); spawnFleet();
+        }
+
+        function spawnFleet() {
+            if(isGameOver || bossActive) return;
+            for(let i=1; i<=6; i++) createEnemy((window.innerWidth/7) * i, -100);
+        }
+
+        function createEnemy(x, y, isBoss = false) {
+            const wrapper = document.createElement('div');
+            let hp, w, h;
+
+            if (isBoss) {
+                wrapper.className = 'boss-container';
+                const hpBarBg = document.createElement('div');
+                hpBarBg.className = 'boss-hp-bar-bg';
+                const hpBarFill = document.createElement('div');
+                hpBarFill.className = 'boss-hp-bar-fill';
+                hpBarFill.id = 'boss-hp-fill';
+                hpBarBg.appendChild(hpBarFill);
+                const bossEl = document.createElement('div');
+                bossEl.className = 'boss';
+                wrapper.appendChild(hpBarBg);
+                wrapper.appendChild(bossEl);
+                hp = 49000; w = 112.5; h = 132.5; 
+            } else {
+                wrapper.className = 'enemy';
+                hp = 40; w = 45; h = 45;
+            }
+            wrapper.style.left = (x - w/2) + 'px'; 
+            wrapper.style.top = y + 'px';
+            container.appendChild(wrapper);
+            enemies.push({ el: wrapper, x: x - w/2, y, hp, maxHp: hp, isBoss, w, h, dir: 1 });
+        }
+
+        function update(time) {
+            if(isGameOver) return;
+            if (score >= 6000 && !bossActive) {
+                currentPhase = 4; bossActive = true;
+                phaseIndicator.innerText = " | BOSS";
+                phaseIndicator.style.color = "var(--boss-blue)";
+                enemies.forEach(en => en.el.remove()); enemies = [];
+                createEnemy(window.innerWidth / 2, 50, true);
+            } else if (score >= 4000 && currentPhase < 3) {
+                currentPhase = 3; phaseIndicator.innerText = " | GİZEM";
+                phaseIndicator.style.color = "var(--gizem-color)";
+            } else if (score >= 2000 && currentPhase < 2) {
+                currentPhase = 2; phaseIndicator.innerText = " | EFE";
+                phaseIndicator.style.color = "var(--efe-color)";
+            }
+
+            enemies.forEach((en, index) => {
+                if(en.isBoss) {
+                    en.x += 3.2 * en.dir;
+                    if(en.x > window.innerWidth - en.w || en.x < 0) en.dir *= -1;
+                    en.el.style.left = en.x + 'px';
+                    en.el.style.top = '50px'; en.y = 50; 
+                } else {
+                    en.y += 1.8;
+                    en.el.style.top = en.y + 'px';
+                    if(en.y > window.innerHeight) { en.el.remove(); enemies.splice(index, 1); }
+                }
+            });
+
+            bonuses.forEach((bn, index) => {
+                bn.y += 3; bn.el.style.top = bn.y + 'px';
+                if(Math.abs(bn.y - playerY) < 55 && Math.abs(bn.x - playerX) < 55) {
+                    collectBonus(); bn.el.remove(); bonuses.splice(index, 1);
+                    score += 500; scoreVal.innerText = score;
+                } else if(bn.y > window.innerHeight) { bn.el.remove(); bonuses.splice(index, 1); }
+            });
+
+            if(enemies.length === 0 && !bossActive) spawnFleet();
+            let fireDelay = (currentPhase >= 3) ? 45 : 120; 
+            if(isFiring && (time - lastFireTime > fireDelay)) { shoot(); lastFireTime = time; }
+            requestAnimationFrame(update);
+        }
+
+        function collectBonus() {
+            isPoweredUp = true; if(currentPhase >= 3) gizemStack += 0.05; 
+            player.style.filter = `drop-shadow(0 0 35px var(--bonus-gold)) brightness(1.8)`;
+            if(powerUpTimer) clearTimeout(powerUpTimer);
+            powerUpTimer = setTimeout(() => { isPoweredUp = false; player.style.filter = "drop-shadow(0 0 15px var(--neon-green))"; }, 8000);
+        }
+
+        function shoot() {
+            if(currentPhase >= 3) {
+                createBullet(playerX, playerY - 45); createBullet(playerX - 35, playerY - 10); createBullet(playerX + 35, playerY - 10); 
+            } else { createBullet(playerX, playerY - 45); }
+        }
+
+        function createBullet(x, y) {
+            const b = document.createElement('div');
+            let bc = 'bullet ';
+            if(currentPhase === 4) bc += 'player-bullet-boss';
+            else if(currentPhase === 3) bc += 'player-bullet-v3';
+            else if(currentPhase === 2) bc += 'player-bullet-v2';
+            else bc += 'player-bullet-v1';
+            if(isPoweredUp) bc += ' powered';
+            b.className = bc;
+            let w = (currentPhase === 2) ? 30 : 8;
+            b.style.left = (x - w/2) + 'px'; b.style.top = y + 'px';
+            container.appendChild(b);
+            let by = y;
+            function move() {
+                if(isGameOver || !b.parentNode) return;
+                by += (isPoweredUp ? -45 : -28); b.style.top = by + 'px';
+                for (let i = 0; i < enemies.length; i++) {
+                    let en = enemies[i];
+                    if(by < en.y + en.h && by > en.y && x > en.x && x < en.x + en.w) {
+                        en.hp -= (40 * (isPoweredUp ? (1.5 + gizemStack) : 1));
+                        if (en.isBoss) {
+                            const f = document.getElementById('boss-hp-fill');
+                            let pct = (en.hp / en.maxHp) * 100;
+                            if (f) f.style.width = Math.max(0, pct) + '%';
+                            
+                            // KANAT PATLATMA VE MESAJ
+                            if (pct <= 70 && !wingLeftBroken) {
+                                wingLeftBroken = true; triggerExplosion(en.x, en.y + 50, false, 2.5);
+                                en.el.style.filter = "hue-rotate(200deg) sepia(0.5) contrast(1.2)";
+                            }
+                            if (pct <= 40 && !wingRightBroken) {
+                                wingRightBroken = true; triggerExplosion(en.x + en.w, en.y + 50, false, 2.5);
+                                motivText.style.display = 'block';
+                                setTimeout(() => motivText.style.display = 'none', 3000);
+                            }
+                        }
+                        b.remove(); 
+                        if(en.hp <= 0) {
+                            if(en.isBoss) {
+                                bossActive = false; score += 50000;
+                                finalVictoryExplosion(en.x + en.w/2, en.y + en.h/2);
+                            } else {
+                                triggerExplosion(en.x + en.w/2, en.y + en.h/2, false, 1.5);
+                                checkBonusDrop(en.x, en.y); score += 100;
+                            }
+                            en.el.remove(); enemies.splice(i, 1); scoreVal.innerText = score;
+                        }
+                        return;
+                    }
+                }
+                if(by < -100) b.remove(); else requestAnimationFrame(move);
+            }
+            requestAnimationFrame(move);
+        }
+
+        function triggerExplosion(x, y, isFinal, scale = 1.5) {
+            const fx = document.createElement('div');
+            fx.className = 'explosion-fx';
+            fx.style.setProperty('--exp-scale', scale);
+            fx.style.width = '80px'; fx.style.height = '80px';
+            fx.style.left = (x - 40) + 'px'; fx.style.top = (y - 40) + 'px';
+            container.appendChild(fx);
+            setTimeout(() => fx.remove(), 500);
+        }
+
+        function finalVictoryExplosion(x, y) {
+            for(let i=0; i<15; i++) {
+                setTimeout(() => {
+                    triggerExplosion(x + (Math.random()-0.5)*200, y + (Math.random()-0.5)*200, true, 6);
+                    createFirework(x, y);
+                }, i * 150);
+            }
+        }
+
+        function createFirework(x, y) {
+            const colors = ['#ff0000', '#00ff00', '#0000ff', '#ffff00', '#ff00ff', '#00ffff'];
+            for(let i=0; i<20; i++) {
+                const p = document.createElement('div');
+                p.className = 'firework';
+                p.style.backgroundColor = colors[Math.floor(Math.random()*colors.length)];
+                p.style.left = x + 'px'; p.style.top = y + 'px';
+                p.style.setProperty('--tx', (Math.random()-0.5)*400 + 'px');
+                p.style.setProperty('--ty', (Math.random()-0.5)*400 + 'px');
+                container.appendChild(p);
+                setTimeout(() => p.remove(), 1000);
+            }
+        }
+
+        function checkBonusDrop(x, y) {
+            if(Math.random() < 0.20) { 
+                const bnEl = document.createElement('div');
+                bnEl.className = 'bonus-item'; bnEl.innerText = '★';
+                bnEl.style.left = x + 'px'; bnEl.style.top = y + 'px';
+                container.appendChild(bnEl);
+                bonuses.push({ el: bnEl, x: x, y: y });
+            }
+        }
+
+        function updatePlayerPos() { player.style.left = (playerX - 45) + 'px'; player.style.top = (playerY - 45) + 'px'; }
+        container.addEventListener('touchstart', (e) => { isFiring = true; playerX = e.touches[0].clientX; playerY = e.touches[0].clientY; updatePlayerPos(); });
+        container.addEventListener('touchmove', (e) => { e.preventDefault(); playerX = e.touches[0].clientX; playerY = e.touches[0].clientY; updatePlayerPos(); }, { passive: false });
+        window.addEventListener('touchend', () => isFiring = false);
+
+        function resetGame() { document.querySelectorAll('.enemy, .boss-container, .bullet, .explosion-fx, .bonus-item, .firework').forEach(el => el.remove()); init(); }
+        init(); requestAnimationFrame(update);
+    </script>
+</body>
+</html>
